@@ -1,0 +1,72 @@
+{
+  "editor.wordWrap": "off",
+  "editor.formatOnSave": true,
+  "files.trimFinalNewlines": true,
+  "diffEditor.ignoreTrimWhitespace": false,
+  "cSpell.language": "en",
+  // Busca
+  "search.exclude": {
+    "**/node_modules": true,
+    "**/_temp": true,
+    "**/bower_components": true,
+    "*.min.js": true,
+    "*.min.css": true
+  },
+  // JavaScript
+  "javascript.updateImportsOnFileMove.enabled": "always",
+  // JSON
+  "[json]": {
+    "editor.defaultFormatter": "vscode.json-language-features"
+  },
+  "[jsonc]": {
+    "editor.defaultFormatter": "vscode.json-language-features"
+  },
+  // Prettier
+  "prettier.requireConfig": true,
+  "prettier.configPath": ".prettierrc.json",
+  "prettier.ignorePath": ".prettierignore",
+  // Formatadores por linguagem
+  "[html]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "[javascript]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "[markdown]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "[scss]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "[css]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "[vue]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "[blade]": {
+    "editor.defaultFormatter": "shufo.vscode-blade-formatter"
+  },
+  "[php]": {
+    "editor.defaultFormatter": "bmewburn.vscode-intelephense-client"
+  },
+  // Git
+  "git.rebaseWhenSync": true,
+  "git.enableSmartCommit": true,
+  // ESLint
+  "eslint.packageManager": "yarn",
+  "eslint.format.enable": true,
+  "eslint.options": {
+    "configFile": ".eslintrc.json"
+  },
+  "eslint.validate": [
+    "vue",
+    "html",
+    "javascript",
+    "typescript",
+    "javascriptreact",
+    "typescriptreact"
+  ],
+  // npm
+  "npm.packageManager": "yarn"
+}

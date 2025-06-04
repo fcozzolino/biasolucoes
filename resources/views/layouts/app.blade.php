@@ -23,7 +23,7 @@
         <a href="{{ route('dashboard') }}" class="text-gray-700 hover:text-blue-600">Dashboard</a>
         <a href="#" class="text-gray-700 hover:text-blue-600">Tarefas</a>
         <a href="#" class="text-gray-700 hover:text-blue-600">Financeiro</a>
-        <a href="#" class="text-gray-700 hover:text-blue-600">CRM</a>
+        <a href="#" class="text-gray-700 hover:text-blue-600">CRMs</a>
         <a href="#" class="text-gray-700 hover:text-blue-600">Configurações</a>
       </nav>
       <div class="flex items-center gap-4">
@@ -34,6 +34,10 @@
         </form>
       </div>
     </div>
+    <script
+  src="https://cdn.jsdelivr.net/npm/jkanban@1.3.1/dist/jkanban.min.js"
+  defer
+></script>
   </header>
 
   <!-- Conteúdo -->

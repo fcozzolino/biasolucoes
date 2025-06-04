@@ -10,7 +10,7 @@
 
 // scss-docs-start gray-color-variables
 $white: #fff !default;
-$black: #2f2b3d !default;
+$black: #000000 !default;
 $gray-25: rgba($black, 0.015) !default; // (C)
 $gray-50: rgba($black, 0.06) !default; // (C)
 $gray-75: rgba($black, 0.08) !default; // (C)
@@ -53,7 +53,7 @@ $info: $cyan !default;
 $warning: $yellow !default;
 $danger: $red !default;
 $light: #dfdfe3 !default;
-$dark: #4b4b4b !default;
+$dark: #000000 !default;
 $gray: $gray-500 !default; // (C)
 // scss-docs-end theme-color-variables
 
@@ -226,9 +226,11 @@ $caret-spacing: 0.5em !default;
 
 // * Typography
 // *******************************************************************************
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap');
 
 // scss-docs-start font-variables
 $font-family-sans-serif:
+  'Inter', sans-serif,
   'Public Sans',
   -apple-system,
   BlinkMacSystemFont,

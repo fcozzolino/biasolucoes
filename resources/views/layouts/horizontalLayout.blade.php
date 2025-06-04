@@ -25,8 +25,10 @@ $footerFixed = (isset($configData['footerFixed']) ? $configData['footerFixed'] :
 $menuCollapsed = (isset($configData['menuCollapsed']) ? $configData['menuCollapsed'] : '');
 
 /* Content classes */
-$container = ($configData['contentLayout'] === 'compact') ? 'container-xxl' : 'container-fluid';
-$containerNav = ($configData['contentLayout'] === 'compact') ? 'container-xxl' : 'container-fluid';
+//$container = ($configData['contentLayout'] === 'compact') ? 'container-xxl' : 'container-fluid';
+//$containerNav = ($configData['contentLayout'] === 'compact') ? 'container-xxl' : 'container-fluid';
+$container = 'container-fluid';
+$containerNav = 'container-fluid';
 
 @endphp
 
@@ -47,12 +49,18 @@ $containerNav = ($configData['contentLayout'] === 'compact') ? 'container-xxl' :
       {{-- Below commented code read by artisan command while installing jetstream. !! Do not remove if you want to use jetstream. --}}
       {{-- <x-banner /> --}}
 
-      <!-- Content wrapper -->
-      <div class="content-wrapper">
+      <!-- Content wrapper era a div original do sistema -->
+      <!-- <div class="content-wrapper"> -->
+        <div class="content-fluid">
 
+
+        {{-- MENU ORIGINAL: código do menu horizontal original é esse debaixo, porém tirei e coloquei dentro de navbar.blade.php --}}
+        {{--
         @if ($isMenu)
         @include('layouts/sections/menu/horizontalMenu')
         @endif
+        --}}
+        {{-- FIM MENU ORIGINAL: código do menu horizontal original é esse debaixo, porém tirei e coloquei dentro de navbar.blade.php --}}
 
         <!-- Content -->
         @if ($isFlex)
@@ -67,9 +75,7 @@ $containerNav = ($configData['contentLayout'] === 'compact') ? 'container-xxl' :
           <!-- / Content -->
 
           <!-- Footer -->
-          @if ($isFooter)
-          @include('layouts/sections/footer/footer')
-          @endif
+
           <!-- / Footer -->
           <div class="content-backdrop fade"></div>
         </div>

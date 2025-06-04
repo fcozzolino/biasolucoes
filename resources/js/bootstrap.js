@@ -1,4 +1,6 @@
 import axios from 'axios';
-window.axios = axios;
+import 'jkanban/dist/jkanban.min.css';
 
-window.axios.defaults.headers.common['X-Requested-With'] = 'XMLHttpRequest';
+axios.defaults.withCredentials = true;                       // envia cookies de sessão
+axios.defaults.headers.common['Accept'] = 'application/json';
+axios.defaults.headers.common['X-Requested-With'] = 'XMLHttpRequest';
