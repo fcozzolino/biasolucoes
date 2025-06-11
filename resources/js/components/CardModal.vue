@@ -119,18 +119,37 @@
                 <!-- Campo mini DESCRIÇÃO: esse campo aparece na listagem dos CARDS -->
 
                 <!-- Campo DESCRIÇÃO COMPLETA -->
-                <div class="mb-3 mt-5 pt-4">
+
+                <div class="mb-3 mt-0 pt-0">
                   <i class="fa-solid fa-align-left me-2 cor_icone"></i>
                   <label class="form-label">Descrição</label>
 
                   <!-- Exibição da descrição (modo leitura) -->
                   <div v-if="!editing.full_description">
                     <div
+                      v-if="
+                        card.full_description &&
+                        card.full_description !== '<p>&nbsp;</p>' &&
+                        card.full_description
+                          .replace(/<[^>]*>/g, '')
+                          .replace(/&nbsp;/g, '')
+                          .trim()
+                      "
                       class="text-area-editor formatted-content text-black p-2"
                       :class="{ 'collapsed-content': !showFullDescription && isLongDescription }"
                       @click="handleContentClick"
                       v-html="formattedDescription"
-                    ></div>
+                    />
+
+                    <!-- Se não tem descrição, mostra placeholder -->
+                    <div
+                      v-else
+                      class="text-area-editor text-muted p-2"
+                      style="cursor: pointer"
+                      @click="startEdit('full_description')"
+                    >
+                      <em>Clique para adicionar descrição...</em>
+                    </div>
 
                     <!-- Botão Mostrar mais/menos -->
                     <div v-if="isLongDescription" class="text-center mt-2">
@@ -153,7 +172,12 @@
 
                   <!-- Modo edição com RichTextEditor -->
                   <template v-else>
-                    <RichTextEditor v-model="localCard.full_description" class="mb-2" rows="1" />
+                    <RichTextEditor
+                      v-model="localCard.full_description"
+                      class="mb-2"
+                      rows="1"
+                      :disabled="loadingField === 'full_description'"
+                    />
 
                     <div class="mt-2">
                       <button
@@ -170,6 +194,7 @@
                       <button
                         class="btn btn-xs btn-label-secondary me-2 mb-2 rounded"
                         @click="cancelEdit('full_description')"
+                        :disabled="loadingField === 'full_description'"
                       >
                         Cancelar
                       </button>
@@ -208,6 +233,7 @@
                 -->
 
                 <!-- Campo COR -->
+                <!--
                 <div class="mb-3">
                   <label class="form-label">Cor</label>
                   <div
@@ -244,6 +270,7 @@
                     </div>
                   </template>
                 </div>
+                -->
 
                 <!-- Upload e anexos -->
                 <div class="mb-3">
@@ -523,15 +550,23 @@
 
               <!-- LADO DIREITO -->
               <div class="col-md-2 p-3 m-3 card-sidebar">
-                <div class="d-flex  justify-content-end">
-                <button class="btn btn-xs btn-outline-secondary border-none mb-2 p-1" @click="close">  <i class="fas fa-close me-1"></i>  </button>
+                <div class="d-flex justify-content-end">
+                  <button
+                    class="btn btn-xs btn-outline-secondary border-none mb-2 p-1"
+                    @click="close"
+                  >
+                    <i class="fas fa-close me-1"></i>
+                  </button>
                 </div>
                 <div class="text-center">
-                  <h6 class="font-bold mb-5 ">Ações do Card</h6>
+                  <h6 class="font-bold mb-5">Ações do Card</h6>
                 </div>
                 <!-- <button class="btn-close d-flex align-items-center" @click="close"></button> -->
                 <!-- Botão Datas -->
-                <button class="btn btn-sm rounded-pill btn-outline-secondary waves-effect w-100 mb-2 text-start" @click.stop="toggleDatePanel">
+                <button
+                  class="btn btn-sm rounded-pill btn-outline-secondary waves-effect w-100 mb-2 text-start"
+                  @click.stop="toggleDatePanel"
+                >
                   <i class="fa-regular fa-calendar me-2"></i>
                   Datas
                 </button>
@@ -545,7 +580,10 @@
                 <!-- FIM Botão Datas -->
 
                 <!-- Botão Etiquetas -->
-                <button class="btn btn-sm rounded-pill btn-outline-secondary waves-effect w-100 mb-2 text-start" @click.stop="toggleLabelsPanel">
+                <button
+                  class="btn btn-sm rounded-pill btn-outline-secondary waves-effect w-100 mb-2 text-start"
+                  @click.stop="toggleLabelsPanel"
+                >
                   <i class="fa-solid fa-tag me-2"></i>
                   Etiquetas
                   <span
@@ -564,23 +602,32 @@
                 />
                 <!-- FIM Botão Etiquetas -->
 
-
                 <!-- Botões Arquivar -->
-                <button class="btn btn-sm rounded-pill btn-outline-secondary  waves-effect w-100 mb-2 text-start" @click="toggleConfirmArchive">
+                <button
+                  class="btn btn-sm rounded-pill btn-outline-secondary waves-effect w-100 mb-2 text-start"
+                  @click="toggleConfirmArchive"
+                >
                   <i class="fas fa-archive me-1"></i>
                   Arquivar
                 </button>
                 <transition name="fade-popover">
                   <div
                     v-if="showArchiveConfirm"
-                    class="popover-box p-2 shadow border rounded bg-white  end-0"
+                    class="popover-box p-2 shadow border rounded bg-white end-0"
                     style="bottom: 100%; z-index: 1055; min-width: 240px"
                   >
                     <p class="mb-2">Deseja arquivar ou excluir este card?</p>
                     <div class="d-flex justify-content-end gap-2">
-                      <button class="btn btn-xs rounded btn-warning" @click="archiveCard">Arquivar</button>
-                      <button class="btn btn-xs rounded btn-danger" @click="deleteCard">Excluir</button>
-                      <button class="btn btn-xs rounded btn-secondary" @click="cancelArchiveConfirm">
+                      <button class="btn btn-xs rounded btn-warning" @click="archiveCard">
+                        Arquivar
+                      </button>
+                      <button class="btn btn-xs rounded btn-danger" @click="deleteCard">
+                        Excluir
+                      </button>
+                      <button
+                        class="btn btn-xs rounded btn-secondary"
+                        @click="cancelArchiveConfirm"
+                      >
                         Cancelar
                       </button>
                     </div>
@@ -606,13 +653,16 @@
 </template>
 
 <script setup>
-  import { ref, watch, onMounted, nextTick, computed } from 'vue';
+  //import { ref, watch, onMounted, nextTick, computed } from 'vue';
+  import { ref, watch, onMounted, onBeforeUnmount, nextTick, computed } from 'vue';
   import { Modal } from 'bootstrap';
   import axios from 'axios';
   import VueEasyLightbox from 'vue-easy-lightbox';
   import DatePopover from './DatePopover.vue';
   import RichTextEditor from './RichTextEditor.vue';
   import LabelsPopover from './LabelsPopover.vue';
+
+  let isMounted = false;
 
   const props = defineProps({
     cardId: Number,
@@ -682,78 +732,190 @@
         const { data } = await axios.get(`/api/cards/${props.cardId}`);
         console.log('Card retornado da API:', data);
         console.log('Comentários recebidos:', data.comments);
+        console.log('Labels recebidas:', data.labels); // ADICIONE ESTE LOG
 
         // Verificar se comments existe e é um array
         if (!data.comments) {
           console.warn('Os comentários não foram retornados da API ou não estão definidos');
-          data.comments = []; // Inicializa como array vazio caso não exista
+          data.comments = [];
         } else if (!Array.isArray(data.comments)) {
           console.warn('Os comentários não são um array:', data.comments);
-          data.comments = []; // Força como array vazio se não for um array
+          data.comments = [];
         }
 
+        // REMOVA esta linha que sobrescreve o card.value
+        // card.value = data;
+
+        // Use apenas esta atribuição, incluindo as labels
         card.value = {
           ...data,
           start_date: data.start_date || null,
           due_date: data.due_date || null,
           reminder_interval: data.reminder_interval || '',
+          labels: data.labels || [], // ADICIONE esta linha para garantir que labels existe
+          comments: data.comments, // Garante que os comentários tratados sejam usados
         };
 
-        card.value = data;
-        localCard.value = JSON.parse(JSON.stringify(data));
+        localCard.value = JSON.parse(JSON.stringify(card.value)); // Use card.value ao invés de data
       } catch (error) {
         console.error('Erro ao buscar dados do card:', error);
       }
     }
   };
 
-  const startEdit = key => {
+  const startEdit = async key => {
+    console.log('Iniciando edição do campo:', key);
+
+    // Garante que o valor local está sincronizado
+    localCard.value[key] = card.value[key] || '';
     editing.value[key] = true;
-  };
 
-  const cancelEdit = key => {
-    localCard.value[key] = card.value[key];
-    editing.value[key] = false;
-  };
+    // Aguarda o RichTextEditor ser montado
+    await nextTick();
 
-  const saveField = async key => {
-    // Debug - verificar o que está sendo salvo
-    console.log('=== DEBUG SAVE FIELD ===');
-    console.log('Campo:', key);
-    console.log('Valor a salvar:', localCard.value[key]);
-    console.log('Tipo do valor:', typeof localCard.value[key]);
-
-    loadingField.value = key;
-
-    try {
-      const updated = { [key]: localCard.value[key] };
-
-      // Debug - verificar o objeto que será enviado
-      console.log('Objeto enviado para API:', updated);
-
-      // Salva apenas o campo alterado
-      const response = await axios.put(`/api/cards/${card.value.id}`, updated);
-
-      // Debug - verificar resposta
-      console.log('Resposta da API:', response.data);
-
-      // Atualiza apenas o campo no card atual, sem recarregar tudo
-      card.value[key] = localCard.value[key];
-
-      editing.value[key] = false;
-
-      // Emite para atualizar o card no board (caso necessário)
-      emit('update-card', card.value);
-
-      console.log('Campo salvo com sucesso!');
-      console.log('=== FIM DEBUG ===');
-    } catch (error) {
-      console.error(`Erro ao salvar o campo "${key}":`, error);
-      console.error('Detalhes do erro:', error.response?.data);
-    } finally {
-      loadingField.value = null;
+    // Se for o RichTextEditor, tenta focar nele
+    if (key === 'full_description') {
+      // Aguarda um pouco mais para garantir que o editor esteja pronto
+      setTimeout(() => {
+        const editor = document.querySelector('.ql-editor');
+        if (editor) {
+          editor.focus();
+        }
+      }, 100);
     }
   };
+
+  // Método para cancelar edição
+  const cancelEdit = key => {
+    console.log('Cancelando edição do campo:', key);
+
+    editing.value[key] = false;
+    // Restaura o valor original
+    localCard.value[key] = card.value[key] || '';
+
+    // Reset do mostrar mais/menos se for full_description
+    if (key === 'full_description') {
+      showFullDescription.value = false;
+    }
+  };
+
+  // Método para lidar com blur no RichTextEditor (se necessário)
+  const handleBlur = key => {
+    // Não salva automaticamente no blur para evitar salvamentos indesejados
+    // O usuário deve clicar explicitamente em "Salvar"
+    console.log('Blur no campo:', key);
+  };
+
+  // CardModal.vue - Função saveField com debug aprimorado
+  const saveField = async key => {
+  console.log('=== DEBUG SAVE FIELD ===');
+  console.log('Campo:', key);
+  console.log('Valor a salvar:', localCard.value[key]);
+  console.log('Tipo do valor:', typeof localCard.value[key]);
+
+  // Previne execução se já está salvando
+  if (loadingField.value === key) {
+    console.log('Já está salvando este campo, ignorando...');
+    return;
+  }
+
+  loadingField.value = key;
+
+  try {
+    // Trata valores vazios de forma consistente
+    let valueToSave = localCard.value[key];
+
+    // Para o RichTextEditor (full_description)
+    if (key === 'full_description') {
+      // Se estiver vazio ou null, envia <p><br></p> que é o padrão do Quill
+      if (!valueToSave || valueToSave === '') {
+        valueToSave = '<p><br></p>';
+      }
+      // Não remove <p><br></p> pois é o estado padrão do Quill
+      console.log('Valor final para full_description:', valueToSave);
+    }
+
+    // Para outros campos de texto que podem ser nulos
+    if (['description', 'link'].includes(key)) {
+      if (valueToSave === '' || (typeof valueToSave === 'string' && valueToSave.trim() === '')) {
+        valueToSave = null;
+      }
+    }
+
+    const updated = { [key]: valueToSave };
+    console.log('Objeto enviado para API:', JSON.stringify(updated));
+
+    const response = await axios.put(`/api/cards/${card.value.id}`, updated);
+
+    console.log('Resposta da API:', response.data);
+
+    // Verifica se a resposta tem dados válidos
+    if (response.data && response.data.id) {
+      // Usa nextTick para garantir que as atualizações sejam feitas corretamente
+      await nextTick();
+
+      // Atualiza o valor no card principal
+      const updatedValue = response.data[key] !== undefined ? response.data[key] : valueToSave;
+
+      // Cria um novo objeto para evitar problemas de reatividade
+      card.value = {
+        ...card.value,
+        [key]: updatedValue,
+      };
+
+      // Atualiza o valor local
+      localCard.value = {
+        ...localCard.value,
+        [key]: updatedValue
+      };
+
+      // Aguarda um tick antes de fechar o editor
+      await nextTick();
+
+      // Fecha o modo de edição
+      editing.value[key] = false;
+
+      // Reset do estado mostrar mais/menos se for full_description
+      if (key === 'full_description') {
+        showFullDescription.value = false;
+      }
+
+      // Aguarda mais um tick antes de emitir o evento
+      await nextTick();
+
+      // Emite o evento com uma cópia do card
+      emit('update-card', { ...card.value });
+
+      console.log('Campo salvo com sucesso!');
+    } else {
+      throw new Error('Resposta inválida da API - sem ID retornado');
+    }
+
+    console.log('=== FIM DEBUG ===');
+  } catch (error) {
+    console.error(`Erro ao salvar o campo "${key}":`, error);
+    console.error('Detalhes do erro:', error.response?.data);
+
+    // Reverte as mudanças em caso de erro
+    localCard.value[key] = card.value[key] || '';
+
+    // Notifica o usuário com mais detalhes
+    const errorMessage = error.response?.data?.message || error.message || 'Erro desconhecido';
+
+    if (window.confirm(`Erro ao salvar: ${errorMessage}\n\nDeseja tentar novamente?`)) {
+      // Tenta novamente após um delay
+      setTimeout(() => saveField(key), 500);
+    } else {
+      // Se não quiser tentar novamente, cancela a edição
+      editing.value[key] = false;
+    }
+  } finally {
+    // Garante que o loading seja removido
+    setTimeout(() => {
+      loadingField.value = null;
+    }, 100);
+  }
+};
 
   const uploadAttachments = async e => {
     const files = e.target.files;
@@ -762,15 +924,6 @@
     if (!files.length) return;
 
     uploading.value = true;
-
-    function abrirSeletor() {
-      if (fileInput.value) {
-        console.log('Disparando clique no input');
-        fileInput.value.click();
-      } else {
-        console.warn('fileInput.value está nulo');
-      }
-    }
 
     // Array para armazenar erros específicos
     const errors = [];
@@ -950,6 +1103,9 @@
   );
 
   onMounted(async () => {
+    isMounted = true; // ADICIONE ESTA LINHA
+    console.log('CardModal montado'); // ADICIONE ESTA LINHA
+
     await nextTick();
 
     if (modalEl.value) {
@@ -958,10 +1114,31 @@
     }
 
     if (props.cardId) {
-      await fetchCard(); // 🔄 primeiro carrega o card
-      loadingCard.value = false; // ✅ só então remove o preloader
+      await fetchCard();
+      loadingCard.value = false;
 
       if (modal) modal.show();
+    }
+  });
+
+  onBeforeUnmount(() => {
+    isMounted = false;
+    console.log('CardModal sendo desmontado');
+
+    // Cancela qualquer operação pendente
+    if (loadingField.value) {
+      loadingField.value = null;
+    }
+
+    // Fecha todos os modos de edição
+    Object.keys(editing.value).forEach(key => {
+      editing.value[key] = false;
+    });
+
+    // Limpa o modal
+    if (modal) {
+      modal.dispose();
+      modal = null;
     }
   });
 
@@ -1189,7 +1366,7 @@
   };
 
   function abrirSeletor() {
-    if (fileInput.value) {
+    if (fileInput.value && fileInput.value.type) {
       console.log('Disparando clique no input');
       fileInput.value.click();
     } else {
@@ -1222,10 +1399,12 @@
 
   // Editor *****************************************************
   // Função para copiar um link e manter como link
-
   const formattedDescription = computed(() => {
-    if (!card.value?.full_description)
-      return '<i class="opacity-20 cor_icone small">Clique para adicionar uma descrição...</i>';
+    // Verifica se não tem descrição ou se é apenas um espaço
+    if (!card.value?.full_description ||
+      card.value.full_description === '<p><br></p>') {
+    return '<i class="opacity-20 cor_icone small">Clique para adicionar uma descrição...</i>';
+  }
 
     let html = card.value.full_description;
 
@@ -1322,6 +1501,8 @@
 
   // Função ETIQUETAS/LABELS *****************************************
   const toggleLabelsPanel = () => {
+    console.log('Card sendo passado para LabelsPopover:', card.value); // DEBUG
+    console.log('Labels do card:', card.value?.labels); // DEBUG
     showLabelsPanel.value = !showLabelsPanel.value;
   };
 

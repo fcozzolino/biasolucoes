@@ -1,134 +1,132 @@
+<!-- v2 -->
 <template>
   <div class="rich-text-editor">
-    <div ref="editor" style="background: white; min-height: 150px;"></div>
+    <!-- editor com altura vinda de props.height -->
+    <div ref="editor" :style="{ background: 'white', minHeight: props.height }"></div>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted, watch, nextTick } from 'vue'
+  import { ref, onMounted, watch, nextTick, onBeforeUnmount } from 'vue';
 
-const props = defineProps({
-  modelValue: {
-    type: String,
-    default: ''
-  }
-})
+  const props = defineProps({
+    modelValue: {
+      type: String,
+      default: '',
+    },
+    placeholder: {
+      type: String,
+      default: 'Digite aqui...',
+    },
+    height: {
+      type: String,
+      default: '120px',
+    },
+  });
 
-const emit = defineEmits(['update:modelValue'])
-const editor = ref(null)
-let quill = null
+  const emit = defineEmits(['update:modelValue']);
+  const editor = ref(null);
+  const quill = ref(null);
 
-onMounted(() => {
-  // Carrega o Quill do CDN se não estiver disponível
-  if (typeof window.Quill === 'undefined') {
-    // Adiciona o CSS
-    const link = document.createElement('link')
-    link.rel = 'stylesheet'
-    link.href = 'https://cdn.quilljs.com/1.3.6/quill.snow.css'
-    document.head.appendChild(link)
+  // expõe a instância de Quill para o pai
+  defineExpose({ quill });
 
-    // Adiciona o JS
-    const script = document.createElement('script')
-    script.src = 'https://cdn.quilljs.com/1.3.6/quill.js'
-    script.onload = () => {
-      initializeQuill()
+  onMounted(() => {
+    if (typeof window.Quill === 'undefined') {
+      // carrega Quill via CDN
+      const link = document.createElement('link');
+      link.rel = 'stylesheet';
+      link.href = 'https://cdn.quilljs.com/1.3.6/quill.snow.css';
+      document.head.appendChild(link);
+
+      const script = document.createElement('script');
+      script.src = 'https://cdn.quilljs.com/1.3.6/quill.js';
+      script.onload = initializeQuill;
+      document.head.appendChild(script);
+    } else {
+      initializeQuill();
     }
-    document.head.appendChild(script)
-  } else {
-    initializeQuill()
-  }
-})
+  });
 
-function initializeQuill() {
-  if (editor.value && window.Quill) {
-    quill = new window.Quill(editor.value, {
+  onBeforeUnmount(() => {
+    if (quill.value) {
+      quill.value.off('text-change');
+      quill.value = null;
+    }
+  });
+
+  function initializeQuill() {
+    if (!editor.value || !window.Quill) return;
+
+    quill.value = new window.Quill(editor.value, {
       theme: 'snow',
-      placeholder: 'Digite aqui...',
+      placeholder: props.placeholder,
       modules: {
         toolbar: [
-          [{ 'header': [1, 2, 3, 4, false] }],
+          [{ header: [1, 2, 3, 4, false] }],
           ['bold', 'italic', 'underline', 'strike'],
-          [{ 'align': [] }], [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+          [{ align: [] }],
+          [{ list: 'ordered' }, { list: 'bullet' }],
           ['blockquote', 'code-block'],
           ['link'],
-          ['clean'] // Limpar formatação
+          ['clean'],
+        ],
+      },
+    });
 
-        ]
-      }
-    })
+    // conteúdo inicial
+    quill.value.root.innerHTML = props.modelValue || '<p><br></p>';
 
-    // Define conteúdo inicial
-    if (props.modelValue) {
-      quill.root.innerHTML = props.modelValue
-    }
-
-    // Escuta mudanças
-    let isUpdating = false
-    quill.on('text-change', () => {
-      if (!isUpdating) {
-        const content = quill.root.innerHTML
-        emit('update:modelValue', content === '<p><br></p>' ? '' : content)
-      }
-    })
+    // sincroniza com o v-model
+    quill.value.on('text-change', () => {
+      emit('update:modelValue', quill.value.root.innerHTML);
+    });
   }
-}
 
-// Atualiza o editor quando o valor muda externamente
-watch(() => props.modelValue, (newValue, oldValue) => {
-  if (quill && newValue !== oldValue) {
-    // Verifica se a mudança veio do próprio editor
-    const currentContent = quill.root.innerHTML
-    if (currentContent !== newValue) {
-      // Salva a posição do cursor
-      const selection = quill.getSelection()
-
-      // Flag para evitar loop infinito
-      isUpdating = true
-
-      // Atualiza o conteúdo
-      quill.root.innerHTML = newValue || ''
-
-      // Restaura a posição do cursor se possível
-      if (selection) {
-        // Aguarda o próximo tick para garantir que o DOM foi atualizado
+  watch(
+    () => props.modelValue,
+    (newVal, oldVal) => {
+      if (!quill.value || newVal === oldVal) return;
+      const current = quill.value.root.innerHTML;
+      if (current !== newVal) {
+        const sel = quill.value.getSelection();
+        quill.value.root.innerHTML = newVal || '<p><br></p>';
         nextTick(() => {
+          // tenta restaurar a seleção
           try {
-            quill.setSelection(selection.index, selection.length)
-          } catch (e) {
-            // Se falhar, coloca o cursor no final
-            const length = quill.getLength()
-            quill.setSelection(length - 1, 0)
+            if (sel) {
+              quill.value.setSelection(sel.index, sel.length);
+            }
+          } catch {
+            const len = quill.value.getLength();
+            if (len > 0) quill.value.setSelection(len - 1, 0);
           }
-          isUpdating = false
-        })
-      } else {
-        isUpdating = false
+        });
       }
     }
-  }
-})
+  );
 </script>
 
 <style scoped>
-.rich-text-editor {
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  overflow: hidden;
-}
+  .rich-text-editor {
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    overflow: hidden;
+  }
 
-:deep(.ql-toolbar) {
-  background: #f8f9fa;
-  border: none;
-  border-bottom: 1px solid #ddd;
-}
+  :deep(.ql-toolbar) {
+    background: #f8f9fa;
+    border: none;
+    border-bottom: 1px solid #ddd;
+  }
 
-:deep(.ql-container) {
-  border: none;
-  font-size: 14px;
-}
+  :deep(.ql-container) {
+    border: none;
+    font-size: 14px;
+  }
 
-:deep(.ql-editor) {
-  min-height: 120px;
-  padding: 12px;
-}
+  :deep(.ql-editor) {
+    /* padding interno */
+    padding: 12px;
+  }
 </style>

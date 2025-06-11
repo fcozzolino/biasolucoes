@@ -7,10 +7,10 @@
       "slug": "pages-home"
     },
     {
-      "url": "page-2",
+      "url": "tarefas-vue",
       "icon": "menu-icon tf-icons ti ti-file",
-      "name": "Page 2",
-      "slug": "pages-page-2"
+      "name": "Tarefas",
+      "slug": "Tarefas"
     },
     {
       "url": "pages/misc-error",

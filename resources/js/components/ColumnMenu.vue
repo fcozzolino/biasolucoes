@@ -1,6 +1,6 @@
 <template>
   <div class="dropdown">
-    <button class="btn btn-sm btn-light" type="button" data-bs-toggle="dropdown">
+    <button class="btn btn-sm btn-rounded-primary text-white shadow-none" type="button" data-bs-toggle="dropdown">
       <i class="fa-solid fa-ellipsis-vertical"></i>
     </button>
     <ul class="dropdown-menu dropdown-menu-end">

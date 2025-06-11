@@ -42,19 +42,26 @@ function libsWindowAssignment() {
       } else if (id.includes('vfs_fonts')) {
         return src.replaceAll('this.pdfMake', 'window.pdfMake');
       }
-    }
+    },
   };
 }
 
 export default defineConfig({
-  
   plugins: [
-    vue(),
+    vue({
+      template: {
+        transformAssetUrls: {
+          base: null,
+          includeAbsolute: false,
+        },
+      },
+    }),
     laravel({
       input: [
         'resources/css/app.css',
         'resources/assets/css/demo.css',
         'resources/js/app.js',
+        'resources/js/components-loader.js',
         'resources/js/app-kanban.js',
         'resources/assets/vendor/libs/jkanban/jkanban.js',
         'resources/assets/vendor/libs/jkanban/jkanban.css',
@@ -65,22 +72,22 @@ export default defineConfig({
         ...CoreScssFiles,
         ...LibsScssFiles,
         ...LibsCssFiles,
-        ...FontsScssFiles
+        ...FontsScssFiles,
       ],
       optimizeDeps: {
         esbuildOptions: {
           plugins: [
             NodeGlobalsPolyfillPlugin({
               process: true,
-              buffer: true
-            })
-          ]
-        }
+              buffer: true,
+            }),
+          ],
+        },
       },
-      refresh: true
+      refresh: true,
     }),
     html(),
-    libsWindowAssignment()
+    libsWindowAssignment(),
   ],
   resolve: {
     alias: {

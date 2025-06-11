@@ -11,7 +11,7 @@
   <div class="row">
     @foreach ($boards as $board)
       <div class="col-md-4 mb-4">
-        <a href="{{ route('board.show', $board->id) }}" class="text-decoration-none">
+        <a href="{{ route('board.vue', $board->id) }}" class="text-decoration-none">
           <div class="card h-100">
             <div class="card-body">
               <h5 class="card-title">{{ $board->title }}</h5>

@@ -1,6 +1,3 @@
-body{
-  overflow-y: hidden!important;
-}
 .kanban-drag {
   height: 100%;
   overflow: auto;

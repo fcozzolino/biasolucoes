@@ -51,7 +51,7 @@ $containerNav = 'container-fluid';
 
       <!-- Content wrapper era a div original do sistema -->
       <!-- <div class="content-wrapper"> -->
-        <div class="content-fluid">
+        <div class="content-wrapper">
 
 
         {{-- MENU ORIGINAL: código do menu horizontal original é esse debaixo, porém tirei e coloquei dentro de navbar.blade.php --}}

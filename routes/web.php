@@ -48,14 +48,29 @@ Route::middleware('auth')->group(function () {
   Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
   Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
   Route::get('/tarefas', [BoardController::class, 'index'])->name('tarefas.index');
+  Route::get('/board/{board:uuid}', [BoardController::class, 'show'])->name('board.show');
   //Route::get('/board/{id}', [BoardController::class, 'show'])->name('board.show');
+
+  // Rotas de boards - ajuste para usar UUID
+Route::patch('/boards/{board}/archive', [BoardController::class, 'archive'])->name('boards.archive');
+Route::delete('/boards/{board}', [BoardController::class, 'destroy'])->name('boards.destroy');
+
+Route::get('/debug/board/{uuid}', function ($uuid) {
+    $board = \App\Models\Board::where('uuid', $uuid)->first();
+    return response()->json([
+        'found' => $board ? true : false,
+        'board' => $board
+    ]);
+});
 
   Route::get('/board/{id}', function ($id) {
     return view('vue-kanban', ['boardId' => $id]);
   })->middleware(['auth'])->name('board.vue');
 
-
-
+  // Rota para a versão Vue (você pode alternar entre as duas)
+  Route::get('/tarefas-vue', function () {
+    return view('pages.tarefas.index-vue');
+  })->middleware(['auth'])->name('tarefas.vue.index');
 
   Route::post('/columns', [ColumnController::class, 'store'])->name('columns.store');
   Route::post('/cards', [CardController::class, 'store'])->name('cards.store');

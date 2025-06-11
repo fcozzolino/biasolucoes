@@ -26,11 +26,11 @@
     </div>
 @endif
 
-    <!-- MENU - tirei do arquivo horizontalLayout.blade.php e coloquei aqui para ficar ao lado do logo e não abaixo  -->
-        @if ($isMenu)
-        @include('layouts/sections/menu/horizontalMenu')
-        @endif
-    <!-- FIM MENU - tirei do arquivo horizontalLayout.blade.php e coloquei aqui para ficar ao lado do logo e não abaixo  -->
+<!-- MENU - tirei do arquivo horizontalLayout.blade.php e coloquei aqui para ficar ao lado do logo e não abaixo  -->
+@if ($isMenu)
+    @include('layouts/sections/menu/horizontalMenu')
+@endif
+<!-- FIM MENU - tirei do arquivo horizontalLayout.blade.php e coloquei aqui para ficar ao lado do logo e não abaixo  -->
 
 <!-- ! Not required for layout-without-menu -->
 @if (!isset($navbarHideToggle))
@@ -50,9 +50,10 @@
         <!-- Style Switcher -->
         <div class="navbar-nav align-items-center">
             <div class="nav-item dropdown-style-switcher dropdown me-2 me-xl-0">
-                <a class="nav-link btn btn-text-secondary btn-icon rounded-pill dropdown-toggle hide-arrow"
+                <a class="nav-link btn bg-label-primary btn-icon rounded-pill dropdown-toggle hide-arrow"
                     href="javascript:void(0);" data-bs-toggle="dropdown">
-                    <i class='ti ti-md'></i>
+                    <!-- <i class='ti ti-md'></i> -->
+                    <i class="ti ti-sun"></i>
                 </a>
                 <ul class="dropdown-menu dropdown-menu-start dropdown-styles">
                     <li>
@@ -75,8 +76,41 @@
             </div>
         </div>
         <!--/ Style Switcher -->
-
     @endif
+
+
+    @php
+        // Função para gerar as iniciais
+        $getInitials = function ($name) {
+            $words = explode(' ', $name);
+            $initials = '';
+
+            // Primeira letra do primeiro nome
+            if (count($words) >= 1) {
+                $initials .= strtoupper(substr($words[0], 0, 1));
+            }
+
+            // Primeira letra do último nome
+            if (count($words) >= 2) {
+                $initials .= strtoupper(substr($words[count($words) - 1], 0, 1));
+            }
+
+            return $initials ?: 'U';
+        };
+
+        // Gera cor baseada no nome
+        $getAvatarColor = function ($name) {
+            $colors = ['primary', 'success', 'danger', 'warning', 'info', 'secondary'];
+            $colorIndex = abs(crc32($name)) % count($colors);
+            return 'bg-label-' . $colors[$colorIndex];
+        };
+
+        // Variáveis para uso no template
+        $userName = Auth::check() ? Auth::user()->name : 'Usuário';
+        $userPhoto = Auth::check() ? Auth::user()->profile_photo_url : null;
+        $userInitials = $getInitials($userName);
+        $avatarColorClass = $getAvatarColor($userName);
+    @endphp
 
     <ul class="navbar-nav flex-row align-items-center ms-auto">
 
@@ -84,8 +118,13 @@
         <li class="nav-item navbar-dropdown dropdown-user dropdown">
             <a class="nav-link dropdown-toggle hide-arrow p-0" href="javascript:void(0);" data-bs-toggle="dropdown">
                 <div class="avatar avatar-online">
-                    <img src="{{ Auth::user() ? Auth::user()->profile_photo_url : asset('assets/img/avatars/1.png') }}"
-                        alt class="rounded-circle">
+                    @if ($userPhoto)
+                        <img src="{{ $userPhoto }}" alt class="rounded-circle">
+                    @else
+                        <span class="avatar-initial rounded-circle {{ $avatarColorClass }}">
+                            {{ $userInitials }}
+                        </span>
+                    @endif
                 </div>
             </a>
             <ul class="dropdown-menu dropdown-menu-end">
@@ -95,18 +134,17 @@
                         <div class="d-flex align-items-center">
                             <div class="flex-shrink-0 me-2">
                                 <div class="avatar avatar-online">
-                                    <img src="{{ Auth::user() ? Auth::user()->profile_photo_url : asset('assets/img/avatars/1.png') }}"
-                                        alt class="rounded-circle">
+                                    @if ($userPhoto)
+                                        <img src="{{ $userPhoto }}" alt class="rounded-circle">
+                                    @else
+                                        <span class="avatar-initial rounded-circle {{ $avatarColorClass }}">
+                                            {{ $userInitials }}
+                                        </span>
+                                    @endif
                                 </div>
                             </div>
                             <div class="flex-grow-1">
-                                <h6 class="mb-0">
-                                    @if (Auth::check())
-                                        {{ Auth::user()->name }}
-                                    @else
-                                        John Doe
-                                    @endif
-                                </h6>
+                                <h6 class="mb-0">{{ $userName }}</h6>
                                 <small class="text-muted">Admin</small>
                             </div>
                         </div>

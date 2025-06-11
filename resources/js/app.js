@@ -2,8 +2,8 @@
 import 'bootstrap'
 import '../css/app.css'
 import '../../public/vendor/css/pages/app-kanban.css'
-import '../../public/vendor/libs/perfect-scrollbar/perfect-scrollbar.scss'
 import 'quill/dist/quill.snow.css'
+
 
 // Vue e dependências
 import { createApp } from 'vue'

@@ -46,57 +46,64 @@ class CardController extends Controller
   }
 
 
-  public function show(Card $card)
-  {
-    $card->load(['user', 'attachments', 'comments.user']);
+ public function show(Card $card)
+{
+    $card->load(['user', 'attachments', 'labels', 'comments.user']);
 
     return response()->json([
-      'id' => $card->id,
-      'title' => $card->title,
-      'description' => $card->description,
-      'full_description' => $card->full_description,
-      'link' => $card->link,
-      'color' => $card->color,
-      'start_date' => $card->start_date,
-      'due_date' => $card->due_date,
-      'reminder_interval' => $card->reminder_interval,
-      'created_at' => $card->created_at->toDateTimeString(),
-      'user' => [
-        'name' => optional($card->user)->name ?? 'Desconhecido',
-      ],
-      'attachments' => $card->attachments->map(function ($att) {
-        return [
-          'id' => $att->id,
-          'filename' => $att->filename,
-          'path' => $att->path,
-          'mime_type' => $att->mime_type,
-          'created_at' => $att->created_at->toDateTimeString(),
-        ];
-      }),
-      'comments' => $card->comments->map(function ($cmt) {
-        return [
-          'id' => $cmt->id,
-          'content' => $cmt->content,
-          'created_at' => $cmt->created_at->toDateTimeString(),
-          'user' => [
-            'id' => $cmt->user->id,
-            'name' => $cmt->user->name,
-          ]
-        ];
-      }),
-      'comments_count' => $card->comments()->count(),
+        'id' => $card->id,
+        'title' => $card->title,
+        'description' => $card->description,
+        'full_description' => $card->full_description,
+        'link' => $card->link,
+        'color' => $card->color,
+        'start_date' => $card->start_date,
+        'due_date' => $card->due_date,
+        'reminder_interval' => $card->reminder_interval,
+        'created_at' => $card->created_at->toDateTimeString(),
+        'user' => [
+            'name' => optional($card->user)->name ?? 'Desconhecido',
+        ],
+        'attachments' => $card->attachments->map(function ($att) {
+            return [
+                'id' => $att->id,
+                'filename' => $att->filename,
+                'path' => $att->path,
+                'mime_type' => $att->mime_type,
+                'created_at' => $att->created_at->toDateTimeString(),
+            ];
+        }),
+        'labels' => $card->labels->map(function ($label) {  // ADICIONE ESTE BLOCO
+            return [
+                'id' => $label->id,
+                'name' => $label->name,
+                'color' => $label->color,
+            ];
+        }),
+        'comments' => $card->comments->map(function ($cmt) {
+            return [
+                'id' => $cmt->id,
+                'content' => $cmt->content,
+                'created_at' => $cmt->created_at->toDateTimeString(),
+                'user' => [
+                    'id' => $cmt->user->id,
+                    'name' => $cmt->user->name,
+                ]
+            ];
+        }),
+        'comments_count' => $card->comments()->count(),
     ]);
 
-    $card = Card::with([
-            'column',
-            'attachments',
-            'comments.user',
-            'labels' // ADICIONE esta linha
-        ])->findOrFail($id);
-
-        return response()->json($card);
-  }
-
+    // REMOVA estas linhas que estão duplicadas e nunca são executadas
+    // $card = Card::with([
+    //         'column',
+    //         'attachments',
+    //         'comments.user',
+    //         'labels'
+    //     ])->findOrFail($id);
+    //
+    // return response()->json($card);
+}
 
 
 
@@ -165,10 +172,6 @@ class CardController extends Controller
   public function uploadAttachment(Request $request, Card $card)
   {
     Log::info('UPLOAD INICIADO', $request->all());
-
-    $request->validate([
-      'file' => 'required|file|max:10240', // 10MB
-    ]);
 
     $request->validate([
       'file' => 'required|file|max:10240', // 10MB
@@ -288,4 +291,5 @@ class CardController extends Controller
             'labels' => $card->labels
         ]);
     }
+
 }
