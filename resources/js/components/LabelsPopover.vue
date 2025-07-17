@@ -168,12 +168,17 @@
   };
 
   const toggleLabel = async label => {
+    console.log('Toggle label:', label.name);
+    console.log('Labels antes:', [...selectedLabels.value]);
+
     const index = selectedLabels.value.findIndex(l => l.id === label.id);
     if (index > -1) {
       selectedLabels.value.splice(index, 1);
     } else {
       selectedLabels.value.push(label);
     }
+
+    console.log('Labels depois:', [...selectedLabels.value]);
 
     await updateCardLabels();
   };
@@ -263,13 +268,26 @@
 
   const updateCardLabels = async () => {
     try {
-      await axios.put(`/api/cards/${props.card.id}/labels`, {
-        label_ids: selectedLabels.value.map(l => l.id),
+      const labelIds = selectedLabels.value.map(l => l.id);
+
+      console.log('=== ATUALIZANDO LABELS ===');
+      console.log('Labels selecionadas:', selectedLabels.value);
+      console.log('IDs sendo enviados:', labelIds);
+
+      const { data } = await axios.put(`/api/cards/${props.card.id}/labels`, {
+        label_ids: labelIds,
       });
 
-      emit('updated', selectedLabels.value);
+      console.log('Resposta do servidor:', data);
+      console.log('Labels retornadas:', data.labels);
+
+      // Emite as labels retornadas pelo servidor
+      emit('updated', data.labels || []);
     } catch (error) {
       console.error('Erro ao atualizar etiquetas:', error);
+      if (error.response) {
+        console.error('Resposta de erro:', error.response.data);
+      }
     }
   };
 
@@ -296,24 +314,14 @@
   onMounted(async () => {
     await fetchLabels();
 
-    // Se o card tem um array de label_ids ao invés de labels completas
-    if (props.card) {
+    if (props.card && props.card.labels) {
       console.log('Props card completo:', props.card);
+      console.log('Labels do card:', props.card.labels);
 
-      // Tente diferentes propriedades onde as labels podem estar
-      const cardLabels = props.card.labels || props.card.label_ids || [];
+      // Simplifica - assumindo que sempre vem objetos completos
+      selectedLabels.value = [...props.card.labels];
 
-      if (Array.isArray(cardLabels) && cardLabels.length > 0) {
-        // Se são apenas IDs, precisamos encontrar as labels completas
-        if (typeof cardLabels[0] === 'number') {
-          selectedLabels.value = availableLabels.value.filter(label =>
-            cardLabels.includes(label.id)
-          );
-        } else {
-          // Se já são objetos completos
-          selectedLabels.value = [...cardLabels];
-        }
-      }
+      console.log('Labels selecionadas inicialmente:', selectedLabels.value);
     }
   });
 
@@ -328,6 +336,7 @@
       }
     }
   );
+
   watch(
     () => props.card,
     newCard => {
@@ -336,6 +345,18 @@
       }
     },
     { deep: true, immediate: true }
+  );
+
+  // Adicione este watcher para garantir sincronização
+  watch(
+    () => props.card?.labels,
+    newLabels => {
+      console.log('Labels do card mudaram (watcher):', newLabels);
+      if (newLabels) {
+        selectedLabels.value = [...newLabels];
+      }
+    },
+    { immediate: true, deep: true }
   );
 </script>
 

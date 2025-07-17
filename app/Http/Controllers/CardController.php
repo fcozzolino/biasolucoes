@@ -46,67 +46,74 @@ class CardController extends Controller
   }
 
 
- public function show(Card $card)
-{
-    $card->load(['user', 'attachments', 'labels', 'comments.user']);
+  public function show(Card $card)
+  {
+    $card->load(['user', 'attachments', 'labels', 'comments.user', 'checklists.items']);
 
     return response()->json([
-        'id' => $card->id,
-        'title' => $card->title,
-        'description' => $card->description,
-        'full_description' => $card->full_description,
-        'link' => $card->link,
-        'color' => $card->color,
-        'start_date' => $card->start_date,
-        'due_date' => $card->due_date,
-        'reminder_interval' => $card->reminder_interval,
-        'created_at' => $card->created_at->toDateTimeString(),
-        'user' => [
-            'name' => optional($card->user)->name ?? 'Desconhecido',
-        ],
-        'attachments' => $card->attachments->map(function ($att) {
+      'id' => $card->id,
+      'title' => $card->title,
+      'description' => $card->description,
+      'full_description' => $card->full_description,
+      'link' => $card->link,
+      'color' => $card->color,
+      'start_date' => $card->start_date,
+      'due_date' => $card->due_date,
+      'reminder_interval' => $card->reminder_interval,
+      'created_at' => $card->created_at->toDateTimeString(),
+      'user' => [
+        'name' => optional($card->user)->name ?? 'Desconhecido',
+      ],
+      'attachments' => $card->attachments->map(function ($att) {
+        return [
+          'id' => $att->id,
+          'filename' => $att->filename,
+          'path' => $att->path,
+          'mime_type' => $att->mime_type,
+          'created_at' => $att->created_at->toDateTimeString(),
+        ];
+      }),
+      'labels' => $card->labels->map(function ($label) {
+        return [
+          'id' => $label->id,
+          'name' => $label->name,
+          'color' => $label->color,
+        ];
+      }),
+      'checklists' => $card->checklists->map(function ($checklist) { // ADICIONE ESTE BLOCO
+        return [
+          'id' => $checklist->id,
+          'title' => $checklist->title,
+          'position' => $checklist->position,
+          'progress' => $checklist->progress,
+          'completed_count' => $checklist->completed_count,
+          'total_count' => $checklist->total_count,
+          'items' => $checklist->items->map(function ($item) {
             return [
-                'id' => $att->id,
-                'filename' => $att->filename,
-                'path' => $att->path,
-                'mime_type' => $att->mime_type,
-                'created_at' => $att->created_at->toDateTimeString(),
+              'id' => $item->id,
+              'checklist_id' => $item->checklist_id,
+              'content' => $item->content,
+              'is_completed' => $item->is_completed,
+              'position' => $item->position,
+              'completed_at' => $item->completed_at,
             ];
-        }),
-        'labels' => $card->labels->map(function ($label) {  // ADICIONE ESTE BLOCO
-            return [
-                'id' => $label->id,
-                'name' => $label->name,
-                'color' => $label->color,
-            ];
-        }),
-        'comments' => $card->comments->map(function ($cmt) {
-            return [
-                'id' => $cmt->id,
-                'content' => $cmt->content,
-                'created_at' => $cmt->created_at->toDateTimeString(),
-                'user' => [
-                    'id' => $cmt->user->id,
-                    'name' => $cmt->user->name,
-                ]
-            ];
-        }),
-        'comments_count' => $card->comments()->count(),
+          }),
+        ];
+      }),
+      'comments' => $card->comments->map(function ($cmt) {
+        return [
+          'id' => $cmt->id,
+          'content' => $cmt->content,
+          'created_at' => $cmt->created_at->toDateTimeString(),
+          'user' => [
+            'id' => $cmt->user->id,
+            'name' => $cmt->user->name,
+          ]
+        ];
+      }),
+      'comments_count' => $card->comments()->count(),
     ]);
-
-    // REMOVA estas linhas que estão duplicadas e nunca são executadas
-    // $card = Card::with([
-    //         'column',
-    //         'attachments',
-    //         'comments.user',
-    //         'labels'
-    //     ])->findOrFail($id);
-    //
-    // return response()->json($card);
-}
-
-
-
+  }
 
 
   public function update(Request $request, Card $card)
@@ -233,63 +240,63 @@ class CardController extends Controller
 
 
   public function updateLabels(Request $request, Card $card): JsonResponse
-    {
-        $validator = Validator::make($request->all(), [
-            'label_ids' => 'required|array',
-            'label_ids.*' => 'exists:labels,id'
-        ]);
+  {
+    $validator = Validator::make($request->all(), [
+      'label_ids' => 'array', // REMOVE 'required' para permitir array vazio
+      'label_ids.*' => 'exists:labels,id'
+    ]);
 
-        if ($validator->fails()) {
-            return response()->json([
-                'message' => 'Dados inválidos',
-                'errors' => $validator->errors()
-            ], 422);
-        }
-
-        // Sincroniza as etiquetas (remove antigas e adiciona novas)
-        $card->syncLabels($request->label_ids);
-
-        // Recarrega o card com as etiquetas atualizadas
-        $card->load('labels');
-
-        return response()->json([
-            'message' => 'Etiquetas atualizadas com sucesso',
-            'labels' => $card->labels
-        ]);
+    if ($validator->fails()) {
+      return response()->json([
+        'message' => 'Dados inválidos',
+        'errors' => $validator->errors()
+      ], 422);
     }
 
+    // Sincroniza as etiquetas (remove antigas e adiciona novas)
+    $labelIds = $request->input('label_ids', []);
+    $card->labels()->sync($labelIds);
 
-    public function addLabel(Request $request, Card $card): JsonResponse
-    {
-        $validator = Validator::make($request->all(), [
-            'label_id' => 'required|exists:labels,id'
-        ]);
+    // Recarrega o card com as etiquetas atualizadas
+    $card->load('labels');
 
-        if ($validator->fails()) {
-            return response()->json([
-                'message' => 'Dados inválidos',
-                'errors' => $validator->errors()
-            ], 422);
-        }
+    return response()->json([
+      'message' => 'Etiquetas atualizadas com sucesso',
+      'labels' => $card->labels
+    ]);
+  }
 
-        $card->attachLabel($request->label_id);
-        $card->load('labels');
 
-        return response()->json([
-            'message' => 'Etiqueta adicionada com sucesso',
-            'labels' => $card->labels
-        ]);
+  public function addLabel(Request $request, Card $card): JsonResponse
+  {
+    $validator = Validator::make($request->all(), [
+      'label_id' => 'required|exists:labels,id'
+    ]);
+
+    if ($validator->fails()) {
+      return response()->json([
+        'message' => 'Dados inválidos',
+        'errors' => $validator->errors()
+      ], 422);
     }
 
-     public function removeLabel(Card $card, $labelId): JsonResponse
-    {
-        $card->detachLabel($labelId);
-        $card->load('labels');
+    $card->attachLabel($request->label_id);
+    $card->load('labels');
 
-        return response()->json([
-            'message' => 'Etiqueta removida com sucesso',
-            'labels' => $card->labels
-        ]);
-    }
+    return response()->json([
+      'message' => 'Etiqueta adicionada com sucesso',
+      'labels' => $card->labels
+    ]);
+  }
 
+  public function removeLabel(Card $card, $labelId): JsonResponse
+  {
+    $card->detachLabel($labelId);
+    $card->load('labels');
+
+    return response()->json([
+      'message' => 'Etiqueta removida com sucesso',
+      'labels' => $card->labels
+    ]);
+  }
 }

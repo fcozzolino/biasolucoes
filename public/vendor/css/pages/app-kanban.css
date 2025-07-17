@@ -32,6 +32,10 @@
   border-left: 3px solid var(--col-color) !important;
 }
 
+.kanban-board .kanban-item .cor_barra{
+  background-color: var(--col-color) !important;
+}
+
  .kanban-card {
     background-color: white;
     border-radius: 0.25rem;

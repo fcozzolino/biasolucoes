@@ -58,7 +58,12 @@ class BoardController extends Controller
       ->where('user_id', Auth::id())
       ->with([
         'columns.cards' => function ($query) {
-          $query->with(['attachments', 'user', 'labels'])
+          $query->with([
+            'attachments',
+            'user',
+            'labels',
+            'checklists.items' // ADICIONE ESTA LINHA
+          ])
             ->withCount('comments');
         }
       ])
@@ -185,8 +190,11 @@ class BoardController extends Controller
     $board = Board::where('uuid', $uuid)
       ->where('user_id', Auth::id())
       ->with(['columns.cards' => function ($query) {
-        $query->with('labels')
-                ->orderBy('order');
+        $query->with([
+          'labels',
+          'checklists.items' // ADICIONE ESTA LINHA
+        ])
+          ->orderBy('order');
       }])
       ->first();
 

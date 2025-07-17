@@ -5,6 +5,7 @@
         <div
           class="overlay-modal-anexo"
           v-if="card"
+          @dragenter="handleDragEnter"
           @dragover.prevent="handleDragOver"
           @dragleave.prevent="handleDragLeave"
           @drop.prevent="handleDrop"
@@ -381,6 +382,19 @@
                   </li>
                 </ul>
 
+                <!-- Checklist -->
+                <div v-if="hasChecklists" class="mb-4">
+                  <ChecklistPanel
+                    :key="checklistPanelKey"
+                    :card-id="card.id"
+                    @close="closeChecklistPanel"
+                    @updated="handleChecklistUpdate"
+                    @no-checklists="handleNoChecklists"
+                    :inline="true"
+                  />
+                </div>
+                <!-- Fim Checklist -->
+
                 <!-- Comentários com Editor Expansível -->
                 <div class="mb-3">
                   <label class="form-label">Atividade</label>
@@ -602,6 +616,58 @@
                 />
                 <!-- FIM Botão Etiquetas -->
 
+                <!-- Botão Checklist com Popover -->
+                <div class="position-relative mb-2">
+                  <button
+                    class="btn btn-sm rounded-pill btn-outline-secondary waves-effect w-100 text-start"
+                    @click.stop="toggleChecklistCreator"
+                    ref="checklistButton"
+                  >
+                    <i class="fa-solid fa-check-square me-2"></i>
+                    Checklist
+                  </button>
+
+                  <!-- Popover para criar novo checklist -->
+                  <transition name="fade-popover">
+                    <div
+                      v-if="showChecklistCreator"
+                      class="checklist-creator-popover shadow-lg bg-white mt-2 p-4 rounded"
+                      :style="popoverPosition"
+                    >
+                      <div class="popover-header">
+                        <h6 class="mb-0">Adicionar Checklist</h6>
+                      </div>
+                      <div class="popover-body">
+                        <input
+                          v-model="newChecklistTitle"
+                          class="form-control form-control-sm mb-2"
+                          placeholder="Título da checklist..."
+                          @keyup.enter="createChecklist"
+                          @keyup.esc="closeChecklistCreator"
+                          ref="checklistTitleInput"
+                        />
+                        <div class="d-flex gap-2 justify-content-end">
+                          <button
+                            class="btn btn-sm btn-primary"
+                            @click="createChecklist"
+                            :disabled="!newChecklistTitle.trim() || creatingChecklist"
+                          >
+                            <span
+                              v-if="creatingChecklist"
+                              class="spinner-border spinner-border-sm me-1"
+                            ></span>
+                            Adicionar
+                          </button>
+                          <button class="btn btn-sm btn-secondary" @click="closeChecklistCreator">
+                            Cancelar
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </transition>
+                </div>
+                <!-- FIM Botão Checklist -->
+
                 <!-- Botões Arquivar -->
                 <button
                   class="btn btn-sm rounded-pill btn-outline-secondary waves-effect w-100 mb-2 text-start"
@@ -661,6 +727,7 @@
   import DatePopover from './DatePopover.vue';
   import RichTextEditor from './RichTextEditor.vue';
   import LabelsPopover from './LabelsPopover.vue';
+  import ChecklistPanel from './ChecklistPanel.vue';
 
   let isMounted = false;
 
@@ -704,7 +771,19 @@
   /* Labels */
   const showLabelsPanel = ref(false);
 
+  /* Checklist */
+  const showChecklistPanel = ref(false);
+  const hasChecklists = ref(false);
+  const showChecklistCreator = ref(false);
+  const newChecklistTitle = ref('');
+  const creatingChecklist = ref(false);
+  const checklistButton = ref(null);
+  const popoverPosition = ref({ top: '0px', right: '0px' });
+  const checklistPanelKey = ref(0);
+
   const draggingOver = ref(false);
+  const isDraggingChecklistItem = ref(false);
+  let dragCounter = 0;
 
   /* MOSTRA A INICIAL DO NOME DO USUÁRIO */
   const userName = ref('Usuário');
@@ -731,32 +810,28 @@
       try {
         const { data } = await axios.get(`/api/cards/${props.cardId}`);
         console.log('Card retornado da API:', data);
-        console.log('Comentários recebidos:', data.comments);
-        console.log('Labels recebidas:', data.labels); // ADICIONE ESTE LOG
+        console.log('Checklists no card:', data.checklists); // Debug
 
-        // Verificar se comments existe e é um array
-        if (!data.comments) {
-          console.warn('Os comentários não foram retornados da API ou não estão definidos');
-          data.comments = [];
-        } else if (!Array.isArray(data.comments)) {
-          console.warn('Os comentários não são um array:', data.comments);
-          data.comments = [];
-        }
-
-        // REMOVA esta linha que sobrescreve o card.value
-        // card.value = data;
-
-        // Use apenas esta atribuição, incluindo as labels
+        // Garante que todos os campos existam
         card.value = {
           ...data,
           start_date: data.start_date || null,
           due_date: data.due_date || null,
           reminder_interval: data.reminder_interval || '',
-          labels: data.labels || [], // ADICIONE esta linha para garantir que labels existe
-          comments: data.comments, // Garante que os comentários tratados sejam usados
+          labels: data.labels || [],
+          comments: data.comments || [],
+          checklists: data.checklists || [], // Garante que checklists existe
         };
 
-        localCard.value = JSON.parse(JSON.stringify(card.value)); // Use card.value ao invés de data
+        localCard.value = JSON.parse(JSON.stringify(card.value));
+
+        // Verifica se há checklists e atualiza hasChecklists
+        if (card.value.checklists && card.value.checklists.length > 0) {
+          hasChecklists.value = true;
+          checklistPanelKey.value++; // Força re-render do ChecklistPanel
+        } else {
+          hasChecklists.value = false;
+        }
       } catch (error) {
         console.error('Erro ao buscar dados do card:', error);
       }
@@ -808,114 +883,114 @@
 
   // CardModal.vue - Função saveField com debug aprimorado
   const saveField = async key => {
-  console.log('=== DEBUG SAVE FIELD ===');
-  console.log('Campo:', key);
-  console.log('Valor a salvar:', localCard.value[key]);
-  console.log('Tipo do valor:', typeof localCard.value[key]);
+    console.log('=== DEBUG SAVE FIELD ===');
+    console.log('Campo:', key);
+    console.log('Valor a salvar:', localCard.value[key]);
+    console.log('Tipo do valor:', typeof localCard.value[key]);
 
-  // Previne execução se já está salvando
-  if (loadingField.value === key) {
-    console.log('Já está salvando este campo, ignorando...');
-    return;
-  }
-
-  loadingField.value = key;
-
-  try {
-    // Trata valores vazios de forma consistente
-    let valueToSave = localCard.value[key];
-
-    // Para o RichTextEditor (full_description)
-    if (key === 'full_description') {
-      // Se estiver vazio ou null, envia <p><br></p> que é o padrão do Quill
-      if (!valueToSave || valueToSave === '') {
-        valueToSave = '<p><br></p>';
-      }
-      // Não remove <p><br></p> pois é o estado padrão do Quill
-      console.log('Valor final para full_description:', valueToSave);
+    // Previne execução se já está salvando
+    if (loadingField.value === key) {
+      console.log('Já está salvando este campo, ignorando...');
+      return;
     }
 
-    // Para outros campos de texto que podem ser nulos
-    if (['description', 'link'].includes(key)) {
-      if (valueToSave === '' || (typeof valueToSave === 'string' && valueToSave.trim() === '')) {
-        valueToSave = null;
-      }
-    }
+    loadingField.value = key;
 
-    const updated = { [key]: valueToSave };
-    console.log('Objeto enviado para API:', JSON.stringify(updated));
+    try {
+      // Trata valores vazios de forma consistente
+      let valueToSave = localCard.value[key];
 
-    const response = await axios.put(`/api/cards/${card.value.id}`, updated);
-
-    console.log('Resposta da API:', response.data);
-
-    // Verifica se a resposta tem dados válidos
-    if (response.data && response.data.id) {
-      // Usa nextTick para garantir que as atualizações sejam feitas corretamente
-      await nextTick();
-
-      // Atualiza o valor no card principal
-      const updatedValue = response.data[key] !== undefined ? response.data[key] : valueToSave;
-
-      // Cria um novo objeto para evitar problemas de reatividade
-      card.value = {
-        ...card.value,
-        [key]: updatedValue,
-      };
-
-      // Atualiza o valor local
-      localCard.value = {
-        ...localCard.value,
-        [key]: updatedValue
-      };
-
-      // Aguarda um tick antes de fechar o editor
-      await nextTick();
-
-      // Fecha o modo de edição
-      editing.value[key] = false;
-
-      // Reset do estado mostrar mais/menos se for full_description
+      // Para o RichTextEditor (full_description)
       if (key === 'full_description') {
-        showFullDescription.value = false;
+        // Se estiver vazio ou null, envia <p><br></p> que é o padrão do Quill
+        if (!valueToSave || valueToSave === '') {
+          valueToSave = '<p><br></p>';
+        }
+        // Não remove <p><br></p> pois é o estado padrão do Quill
+        console.log('Valor final para full_description:', valueToSave);
       }
 
-      // Aguarda mais um tick antes de emitir o evento
-      await nextTick();
+      // Para outros campos de texto que podem ser nulos
+      if (['description', 'link'].includes(key)) {
+        if (valueToSave === '' || (typeof valueToSave === 'string' && valueToSave.trim() === '')) {
+          valueToSave = null;
+        }
+      }
 
-      // Emite o evento com uma cópia do card
-      emit('update-card', { ...card.value });
+      const updated = { [key]: valueToSave };
+      console.log('Objeto enviado para API:', JSON.stringify(updated));
 
-      console.log('Campo salvo com sucesso!');
-    } else {
-      throw new Error('Resposta inválida da API - sem ID retornado');
+      const response = await axios.put(`/api/cards/${card.value.id}`, updated);
+
+      console.log('Resposta da API:', response.data);
+
+      // Verifica se a resposta tem dados válidos
+      if (response.data && response.data.id) {
+        // Usa nextTick para garantir que as atualizações sejam feitas corretamente
+        await nextTick();
+
+        // Atualiza o valor no card principal
+        const updatedValue = response.data[key] !== undefined ? response.data[key] : valueToSave;
+
+        // Cria um novo objeto para evitar problemas de reatividade
+        card.value = {
+          ...card.value,
+          [key]: updatedValue,
+        };
+
+        // Atualiza o valor local
+        localCard.value = {
+          ...localCard.value,
+          [key]: updatedValue,
+        };
+
+        // Aguarda um tick antes de fechar o editor
+        await nextTick();
+
+        // Fecha o modo de edição
+        editing.value[key] = false;
+
+        // Reset do estado mostrar mais/menos se for full_description
+        if (key === 'full_description') {
+          showFullDescription.value = false;
+        }
+
+        // Aguarda mais um tick antes de emitir o evento
+        await nextTick();
+
+        // Emite o evento com uma cópia do card
+        emit('update-card', { ...card.value });
+
+        console.log('Campo salvo com sucesso!');
+      } else {
+        throw new Error('Resposta inválida da API - sem ID retornado');
+      }
+
+      console.log('=== FIM DEBUG ===');
+    } catch (error) {
+      console.error(`Erro ao salvar o campo "${key}":`, error);
+      console.error('Detalhes do erro:', error.response?.data);
+
+      // Reverte as mudanças em caso de erro
+      localCard.value[key] = card.value[key] || '';
+
+      // Notifica o usuário com mais detalhes
+      const errorMessage = error.response?.data?.message || error.message || 'Erro desconhecido';
+
+      if (window.confirm(`Erro ao salvar: ${errorMessage}\n\nDeseja tentar novamente?`)) {
+        // Tenta novamente após um delay
+        setTimeout(() => saveField(key), 500);
+      } else {
+        // Se não quiser tentar novamente, cancela a edição
+        editing.value[key] = false;
+      }
+    } finally {
+      // Garante que o loading seja removido
+      setTimeout(() => {
+        loadingField.value = null;
+      }, 100);
     }
-
-    console.log('=== FIM DEBUG ===');
-  } catch (error) {
-    console.error(`Erro ao salvar o campo "${key}":`, error);
-    console.error('Detalhes do erro:', error.response?.data);
-
-    // Reverte as mudanças em caso de erro
-    localCard.value[key] = card.value[key] || '';
-
-    // Notifica o usuário com mais detalhes
-    const errorMessage = error.response?.data?.message || error.message || 'Erro desconhecido';
-
-    if (window.confirm(`Erro ao salvar: ${errorMessage}\n\nDeseja tentar novamente?`)) {
-      // Tenta novamente após um delay
-      setTimeout(() => saveField(key), 500);
-    } else {
-      // Se não quiser tentar novamente, cancela a edição
-      editing.value[key] = false;
-    }
-  } finally {
-    // Garante que o loading seja removido
-    setTimeout(() => {
-      loadingField.value = null;
-    }, 100);
-  }
-};
+  };
 
   const uploadAttachments = async e => {
     const files = e.target.files;
@@ -1103,8 +1178,8 @@
   );
 
   onMounted(async () => {
-    isMounted = true; // ADICIONE ESTA LINHA
-    console.log('CardModal montado'); // ADICIONE ESTA LINHA
+    isMounted = true;
+    console.log('CardModal montado');
 
     await nextTick();
 
@@ -1116,9 +1191,21 @@
     if (props.cardId) {
       await fetchCard();
       loadingCard.value = false;
-
       if (modal) modal.show();
     }
+
+    document.addEventListener('click', handleClickOutside);
+
+    // Adiciona listener global para detectar quando um item do checklist está sendo arrastado
+    window.addEventListener('dragstart', e => {
+      if (e.dataTransfer.types.includes('application/x-checklist-item')) {
+        isDraggingChecklistItem.value = true;
+      }
+    });
+
+    window.addEventListener('dragend', () => {
+      isDraggingChecklistItem.value = false;
+    });
   });
 
   onBeforeUnmount(() => {
@@ -1135,11 +1222,17 @@
       editing.value[key] = false;
     });
 
+    // Remove listener
+    document.removeEventListener('click', handleClickOutside);
+
     // Limpa o modal
     if (modal) {
       modal.dispose();
       modal = null;
     }
+
+    window.removeEventListener('dragstart', () => {});
+    window.removeEventListener('dragend', () => {});
   });
 
   // Lightbox
@@ -1331,30 +1424,65 @@
 
   // Bloco Anexo por Arraste e Solva ********************************************
   const handleDragOver = e => {
+    // Verifica se é um item do checklist sendo arrastado
+    if (
+      isDraggingChecklistItem.value ||
+      e.dataTransfer.types.includes('application/x-checklist-item')
+    ) {
+      // Não processa se for item do checklist
+      return;
+    }
+
     e.preventDefault();
     e.dataTransfer.dropEffect = 'copy';
     draggingOver.value = true;
   };
 
   const handleDragLeave = e => {
+    if (
+      isDraggingChecklistItem.value ||
+      e.dataTransfer.types.includes('application/x-checklist-item')
+    ) {
+      return;
+    }
+
     e.preventDefault();
 
-    // Verifica se o cursor realmente saiu do modal
-    const bounds = e.currentTarget.getBoundingClientRect();
-    const isOutside =
-      e.clientX < bounds.left ||
-      e.clientX > bounds.right ||
-      e.clientY < bounds.top ||
-      e.clientY > bounds.bottom;
+    dragCounter--;
 
-    if (isOutside) {
+    if (dragCounter === 0) {
       draggingOver.value = false;
     }
   };
 
+  const handleDragEnter = e => {
+    dragCounter++;
+
+    // Verifica se é um arquivo sendo arrastado
+    if (
+      !isDraggingChecklistItem.value &&
+      !e.dataTransfer.types.includes('application/x-checklist-item')
+    ) {
+      draggingOver.value = true;
+    }
+  };
+
   const handleDrop = async e => {
+    // Reseta o contador
+    dragCounter = 0;
+
+    // Verifica se é um item do checklist
+    const hasChecklistData = e.dataTransfer.types.includes('application/x-checklist-item');
+
+    if (hasChecklistData) {
+      // É um item do checklist, não processa
+      draggingOver.value = false;
+      return;
+    }
+
+    // É um arquivo, processa normalmente
     e.preventDefault();
-    e.stopPropagation(); // impede que o drop suba para outro handler
+    e.stopPropagation();
 
     draggingOver.value = false;
 
@@ -1364,15 +1492,6 @@
     const fakeEvent = { target: { files } };
     await uploadAttachments(fakeEvent);
   };
-
-  function abrirSeletor() {
-    if (fileInput.value && fileInput.value.type) {
-      console.log('Disparando clique no input');
-      fileInput.value.click();
-    } else {
-      console.warn('fileInput.value está nulo');
-    }
-  }
 
   // Fim Bloco Anexo por Arraste e Solva ********************************************
 
@@ -1401,10 +1520,9 @@
   // Função para copiar um link e manter como link
   const formattedDescription = computed(() => {
     // Verifica se não tem descrição ou se é apenas um espaço
-    if (!card.value?.full_description ||
-      card.value.full_description === '<p><br></p>') {
-    return '<i class="opacity-20 cor_icone small">Clique para adicionar uma descrição...</i>';
-  }
+    if (!card.value?.full_description || card.value.full_description === '<p><br></p>') {
+      return '<i class="opacity-20 cor_icone small">Clique para adicionar uma descrição...</i>';
+    }
 
     let html = card.value.full_description;
 
@@ -1508,13 +1626,176 @@
 
   // ADICIONE ESTE MÉTODO PARA ATUALIZAR AS ETIQUETAS
   const handleLabelsUpdate = labels => {
+    console.log('Labels recebidas no handleLabelsUpdate:', labels);
+
     if (card.value) {
-      card.value.labels = labels;
-      localCard.value.labels = [...labels];
+      const updatedLabels = Array.isArray(labels) ? labels : [];
+
+      // Atualiza o card local
+      card.value = {
+        ...card.value,
+        labels: updatedLabels,
+      };
+
+      // Atualiza também o localCard se existir
+      if (localCard.value) {
+        localCard.value = {
+          ...localCard.value,
+          labels: [...updatedLabels],
+        };
+      }
+
+      // Emite o card completo atualizado
       emit('update-card', card.value);
     }
   };
+
+  const handleLabelsUpdated = updatedLabels => {
+    // Atualiza as labels do card local
+    card.value.labels = updatedLabels;
+
+    // Emite para o componente pai atualizar também
+    emit('updated', {
+      ...card.value,
+      labels: updatedLabels,
+    });
+  };
+
   // Fim Função ETIQUETAS/LABELS *****************************************
+
+  // Função CHECKLIST *****************************************
+  const checklistsProgress = computed(() => {
+    if (!card.value?.checklists || card.value.checklists.length === 0) return 0;
+
+    let totalItems = 0;
+    let completedItems = 0;
+
+    card.value.checklists.forEach(checklist => {
+      if (checklist.items && checklist.items.length > 0) {
+        totalItems += checklist.items.length;
+        completedItems += checklist.items.filter(item => item.is_completed).length;
+      }
+    });
+
+    return totalItems > 0 ? Math.round((completedItems / totalItems) * 100) : 0;
+  });
+
+  const toggleChecklistPanel = () => {
+    showChecklistPanel.value = !showChecklistPanel.value;
+    // Fecha outros painéis se abertos
+    if (showChecklistPanel.value) {
+      showLabelsPanel.value = false;
+      showDatePanel.value = false;
+    }
+  };
+
+  const handleChecklistUpdate = data => {
+    console.log('Checklists atualizados:', data);
+
+    if (card.value && data.checklists) {
+      // Atualiza os checklists no card
+      card.value.checklists = data.checklists;
+      hasChecklists.value = data.checklists.length > 0;
+
+      // Se não há mais checklists, força atualização visual
+      if (!hasChecklists.value) {
+        checklistPanelKey.value++;
+      }
+
+      // Emite atualização do card
+      emit('update-card', card.value);
+    }
+  };
+
+  const checkIfHasChecklists = async () => {
+    try {
+      const response = await axios.get(`/api/cards/${props.cardId}/checklists`);
+      hasChecklists.value = response.data.data && response.data.data.length > 0;
+    } catch (error) {
+      console.error('Erro ao verificar checklists:', error);
+    }
+  };
+
+  const toggleChecklistCreator = () => {
+    showChecklistCreator.value = !showChecklistCreator.value;
+    if (showChecklistCreator.value) {
+      calculatePopoverPosition();
+      nextTick(() => {
+        checklistTitleInput.value?.focus();
+      });
+    }
+  };
+
+  const closeChecklistCreator = () => {
+    showChecklistCreator.value = false;
+    newChecklistTitle.value = '';
+  };
+
+  const calculatePopoverPosition = () => {
+    if (!checklistButton.value) return;
+
+    const rect = checklistButton.value.getBoundingClientRect();
+    const popoverWidth = 300;
+
+    // Posiciona à esquerda do botão
+    popoverPosition.value = {
+      top: '0px',
+      right: '220px', // Largura da sidebar + margem
+      width: `${popoverWidth}px`,
+    };
+  };
+
+  const createChecklist = async () => {
+    if (!newChecklistTitle.value.trim() || creatingChecklist.value) return;
+
+    try {
+      creatingChecklist.value = true;
+      const response = await axios.post(`/api/cards/${props.cardId}/checklists`, {
+        title: newChecklistTitle.value.trim(),
+      });
+
+      // Adiciona o novo checklist ao card
+      if (!card.value.checklists) {
+        card.value.checklists = [];
+      }
+      card.value.checklists.push(response.data);
+
+      // Atualiza o estado
+      hasChecklists.value = true;
+      checklistPanelKey.value++; // Força re-render do ChecklistPanel
+      closeChecklistCreator();
+
+      // Emite atualização
+      emit('update-card', card.value);
+    } catch (error) {
+      console.error('Erro ao criar checklist:', error);
+    } finally {
+      creatingChecklist.value = false;
+    }
+  };
+
+  const handleNoChecklists = () => {
+    // Quando todas as checklists são excluídas
+    hasChecklists.value = false;
+  };
+
+  const closeChecklistPanel = () => {
+    // Se quiser implementar um botão de fechar no painel
+    // Por enquanto, o painel fica sempre visível quando há checklists
+  };
+
+  // Click outside para fechar o popover
+  const handleClickOutside = event => {
+    if (showChecklistCreator.value) {
+      const popover = document.querySelector('.checklist-creator-popover');
+      const button = checklistButton.value;
+
+      if (popover && !popover.contains(event.target) && button && !button.contains(event.target)) {
+        closeChecklistCreator();
+      }
+    }
+  };
+  // Fim Função CHECKLIST *****************************************
 </script>
 
 <style scoped>
@@ -1560,7 +1841,15 @@
   }
 
   .overlay-modal-anexo {
+    position: relative;
     border-radius: 0.5rem;
+  }
+  .overlay-modal-anexo .position-absolute {
+    pointer-events: none;
+  }
+
+  .overlay-modal-anexo .position-absolute > * {
+    pointer-events: auto;
   }
   .popover-box {
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
@@ -1936,5 +2225,58 @@ Isso garantirá que os estilos sejam aplicados globalmente
   .upload-area:hover {
     border-color: #6c757d;
     background: #f8f9fa;
+  }
+  .position-relative {
+    position: relative;
+  }
+
+  .badge {
+    font-size: 0.75rem;
+    padding: 0.2rem 0.5rem;
+  }
+  /* Ajuste do modal-body quando o checklist está aberto */
+  .modal-body {
+    display: flex;
+    gap: 0;
+    padding: 0;
+    position: relative;
+  }
+
+  /* Container principal do conteúdo */
+  .modal-body > div:first-child {
+    flex: 1;
+    padding: 1.5rem;
+    overflow-y: auto;
+    max-height: calc(100vh - 200px);
+  }
+
+  /* Animação de slide */
+  .slide-fade-enter-active {
+    transition: all 0.3s ease-out;
+  }
+
+  .slide-fade-leave-active {
+    transition: all 0.2s ease-in;
+  }
+
+  .slide-fade-enter-from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+
+  .slide-fade-leave-to {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+
+  /* Ajuste da largura do modal quando o checklist está aberto */
+  @media (min-width: 992px) {
+    .modal-dialog {
+      transition: max-width 0.3s ease;
+    }
+
+    .checklist-open .modal-dialog {
+      max-width: 1200px !important;
+    }
   }
 </style>

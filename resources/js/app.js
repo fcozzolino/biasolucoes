@@ -11,6 +11,7 @@ import App from './App.vue'
 import router from './router'
 import axios from 'axios'
 
+
 // Configurações globais do Axios
 axios.defaults.headers.common['X-Requested-With'] = 'XMLHttpRequest'
 axios.defaults.withCredentials = true

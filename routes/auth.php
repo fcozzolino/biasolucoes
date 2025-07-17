@@ -1,59 +1,53 @@
 <?php
 
-use App\Http\Controllers\Auth\AuthenticatedSessionController;
-use App\Http\Controllers\Auth\ConfirmablePasswordController;
-use App\Http\Controllers\Auth\EmailVerificationNotificationController;
-use App\Http\Controllers\Auth\EmailVerificationPromptController;
-use App\Http\Controllers\Auth\NewPasswordController;
-use App\Http\Controllers\Auth\PasswordController;
-use App\Http\Controllers\Auth\PasswordResetLinkController;
-use App\Http\Controllers\Auth\RegisteredUserController;
-use App\Http\Controllers\Auth\VerifyEmailController;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\Auth\LoginController;
+use App\Http\Controllers\Auth\RegisterController;
+use App\Http\Controllers\Auth\OtpController;
+use App\Http\Controllers\Auth\TwoFactorController;
+use App\Http\Controllers\Auth\SocialAuthController;
 
 Route::middleware('guest')->group(function () {
-    Route::get('register', [RegisteredUserController::class, 'create'])
-        ->name('register');
+    // Login routes
+    Route::get('login', [LoginController::class, 'showLoginForm'])->name('login');
+    Route::post('login', [LoginController::class, 'login']);
+    Route::post('login/phone', [LoginController::class, 'loginWithPhone'])->name('login.phone');
 
-    Route::post('register', [RegisteredUserController::class, 'store']);
+    // Register routes
+    Route::get('register', [RegisterController::class, 'showRegistrationForm'])->name('register');
+    Route::post('register', [RegisterController::class, 'register']);
 
-    Route::get('login', [AuthenticatedSessionController::class, 'create'])
-        ->name('login');
+    // OTP routes
+    Route::post('otp/send', [OtpController::class, 'send'])->name('otp.send');
+    Route::post('otp/verify', [OtpController::class, 'verify'])->name('otp.verify');
 
-    Route::post('login', [AuthenticatedSessionController::class, 'store']);
-
-    Route::get('forgot-password', [PasswordResetLinkController::class, 'create'])
-        ->name('password.request');
-
-    Route::post('forgot-password', [PasswordResetLinkController::class, 'store'])
-        ->name('password.email');
-
-    Route::get('reset-password/{token}', [NewPasswordController::class, 'create'])
-        ->name('password.reset');
-
-    Route::post('reset-password', [NewPasswordController::class, 'store'])
-        ->name('password.store');
+    // Social login routes
+    Route::get('auth/{provider}', [SocialAuthController::class, 'redirect'])->name('social.login');
+    Route::get('auth/{provider}/callback', [SocialAuthController::class, 'callback'])->name('social.callback');
 });
 
 Route::middleware('auth')->group(function () {
-    Route::get('verify-email', EmailVerificationPromptController::class)
-        ->name('verification.notice');
+    // Logout
+    Route::post('logout', [LoginController::class, 'logout'])->name('logout');
 
-    Route::get('verify-email/{id}/{hash}', VerifyEmailController::class)
-        ->middleware(['signed', 'throttle:6,1'])
-        ->name('verification.verify');
+    // Email verification
+    Route::post('email/resend', [RegisterController::class, 'resendVerification'])->name('verification.resend');
 
-    Route::post('email/verification-notification', [EmailVerificationNotificationController::class, 'store'])
-        ->middleware('throttle:6,1')
-        ->name('verification.send');
+    // Company setup (for business accounts)
+    Route::post('register/company', [RegisterController::class, 'setupCompany'])->name('register.company');
+    Route::post('register/modules', [RegisterController::class, 'selectModules'])->name('register.modules');
 
-    Route::get('confirm-password', [ConfirmablePasswordController::class, 'show'])
-        ->name('password.confirm');
+    // 2FA routes
+    Route::prefix('2fa')->group(function () {
+        Route::post('enable', [TwoFactorController::class, 'enable'])->name('2fa.enable');
+        Route::post('confirm', [TwoFactorController::class, 'confirmEnable'])->name('2fa.confirm');
+        Route::post('disable', [TwoFactorController::class, 'disable'])->name('2fa.disable');
+        Route::post('recovery-codes', [TwoFactorController::class, 'regenerateRecoveryCodes'])->name('2fa.recovery');
+    });
 
-    Route::post('confirm-password', [ConfirmablePasswordController::class, 'store']);
-
-    Route::put('password', [PasswordController::class, 'update'])->name('password.update');
-
-    Route::post('logout', [AuthenticatedSessionController::class, 'destroy'])
-        ->name('logout');
+    // Social account management
+    Route::delete('auth/{provider}', [SocialAuthController::class, 'unlink'])->name('social.unlink');
 });
+
+// 2FA verification (special case - user logged but needs 2FA)
+Route::post('2fa/verify', [TwoFactorController::class, 'verify'])->name('2fa.verify')->middleware('web');

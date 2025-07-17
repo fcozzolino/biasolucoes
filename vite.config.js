@@ -65,6 +65,7 @@ export default defineConfig({
         'resources/js/app-kanban.js',
         'resources/assets/vendor/libs/jkanban/jkanban.js',
         'resources/assets/vendor/libs/jkanban/jkanban.css',
+        'resources/js/auth.js',
         ...pageJsFiles,
         ...vendorJsFiles,
         ...LibsJsFiles,
@@ -92,6 +93,7 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(__dirname, 'resources/js'),
+      'vue': 'vue/dist/vue.esm-bundler.js'  // Esta linha é crucial!
     },
   },
 });

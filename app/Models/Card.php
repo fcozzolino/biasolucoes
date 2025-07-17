@@ -5,7 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
-
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Card extends Model
 {
@@ -64,5 +64,11 @@ class Card extends Model
   public function detachLabel($labelId)
   {
     $this->labels()->detach($labelId);
+  }
+
+
+  public function checklists(): HasMany
+  {
+    return $this->hasMany(Checklist::class)->orderBy('position');
   }
 }

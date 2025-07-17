@@ -558,6 +558,34 @@
                         </span>
                       </div>
 
+
+                      <!-- barra progresso -->
+                      <!-- Barra de progresso do checklist -->
+                      <div
+                        v-if="card.checklist_progress && card.checklist_progress.total > 0"
+                        class="checklist-progress-container mb-0"
+                      >
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                          <small class="text-muted">
+                            <i class="fa-solid fa-list-check me-1"></i>
+                            {{ card.checklist_progress.completed }}/{{
+                              card.checklist_progress.total
+                            }}
+                          </small>
+                          <small class="text-muted">
+                            {{ Math.round(card.checklist_progress.percentage) }}%
+                          </small>
+                        </div>
+                        <div class="progress" style="height: 4px">
+                          <div
+                            class="progress-bar cor_barra progress-bar-striped progress-bar-animated bg-secondary opacity-70 shadow-none"
+                            :style="{ width: card.checklist_progress.percentage + '%' }"
+                          ></div>
+                        </div>
+                      </div>
+                      <!-- / Barra de progresso do checklist -->
+                      <!-- fim barra progresso -->
+
                       <div
                         class="d-flex align-items-center gap-1 mt-2 icons-cards small text-muted"
                       >
@@ -575,6 +603,8 @@
                           {{ card.comments_count }}
                         </template>
                       </div>
+
+
                     </div>
                   </template>
                 </draggable>
@@ -707,33 +737,40 @@
   });
 
   const loadBoard = async () => {
-    loading.value = true;
-    error.value = null;
+  loading.value = true;
+  error.value = null;
 
-    try {
-      await axios.get('/sanctum/csrf-cookie');
-      const { data } = await axios.get(`/api/boards/${boardUuid}`);
+  try {
+    await axios.get('/sanctum/csrf-cookie');
+    const { data } = await axios.get(`/api/boards/${boardUuid}`);
 
-      // DEBUG: Verificar se as labels estão vindo
-      console.log('Board completo:', data);
-      if (data.columns && data.columns.length > 0) {
-        const firstColumn = data.columns[0];
-        if (firstColumn.cards && firstColumn.cards.length > 0) {
-          console.log('Primeiro card da primeira coluna:', firstColumn.cards[0]);
-          console.log('Labels do primeiro card:', firstColumn.cards[0].labels);
+    // DEBUG: Verificar se as labels estão vindo
+    console.log('Board completo:', data);
+
+    // Processa os cards para adicionar informações de checklist
+    if (data.columns && data.columns.length > 0) {
+      data.columns.forEach(column => {
+        if (column.cards && column.cards.length > 0) {
+          column.cards.forEach(card => {
+            // Se o card tiver checklists, calcula o progresso
+            if (card.checklists && card.checklists.length > 0) {
+              card.checklist_progress = calculateChecklistProgress(card.checklists);
+            }
+          });
         }
-      }
-
-      board.value = data;
-      if (!board.value.columns) {
-        await loadColumns();
-      }
-    } catch (err) {
-      error.value = err.message || 'Erro desconhecido ao carregar o board';
-    } finally {
-      loading.value = false;
+      });
     }
-  };
+
+    board.value = data;
+    if (!board.value.columns) {
+      await loadColumns();
+    }
+  } catch (err) {
+    error.value = err.message || 'Erro desconhecido ao carregar o board';
+  } finally {
+    loading.value = false;
+  }
+};
 
   const loadColumns = async () => {
     try {
@@ -788,6 +825,12 @@
     for (const column of board.value.columns) {
       const index = column.cards.findIndex(c => c.id === updatedCard.id);
       if (index !== -1) {
+        // Se a atualização incluir dados do checklist, calcula o progresso
+        if (updatedCard.checklists && updatedCard.checklists.length > 0) {
+          const progress = calculateChecklistProgress(updatedCard.checklists);
+          updatedCard.checklist_progress = progress;
+        }
+
         // Substitui o objeto antigo por um novo objeto
         column.cards.splice(index, 1, { ...updatedCard });
         break;
@@ -803,6 +846,31 @@
         break;
       }
     }
+  };
+
+  // Calcula o progresso total dos checklists
+  const calculateChecklistProgress = checklists => {
+    if (!checklists || checklists.length === 0) {
+      return { total: 0, completed: 0, percentage: 0 };
+    }
+
+    let totalItems = 0;
+    let completedItems = 0;
+
+    checklists.forEach(checklist => {
+      if (checklist.items && checklist.items.length > 0) {
+        totalItems += checklist.items.length;
+        completedItems += checklist.items.filter(item => item.is_completed).length;
+      }
+    });
+
+    const percentage = totalItems > 0 ? (completedItems / totalItems) * 100 : 0;
+
+    return {
+      total: totalItems,
+      completed: completedItems,
+      percentage: percentage,
+    };
   };
 
   /* Menu coluna  ************************************************************************/
@@ -1058,7 +1126,6 @@
 <style>
   body.no-scroll {
     overflow: hidden !important;
-    background: #e0deea;
   }
 </style>
 
@@ -1145,5 +1212,23 @@
 
   .badge.bg-danger {
     background-color: #dc3545 !important;
+  }
+
+  /* Estilos para a barra de progresso do checklist */
+  .checklist-progress-container {
+    padding: 0.25rem 0;
+  }
+
+  .checklist-progress-container .progress {
+    background-color: #e9ecef;
+  }
+
+  .checklist-progress-container .progress-bar {
+    transition: width 0.3s ease;
+  }
+
+  /* Ajuste do hover do card para não cobrir a barra */
+  .kanban-card:hover .checklist-progress-container {
+    opacity: 1;
   }
 </style>
