@@ -4,7 +4,7 @@ import axios from 'axios'
 export const useSecurity = () => {
   const loginAttempts = ref(0)
   const lockoutTime = ref(null)
-  const requireCaptcha = ref(false)
+  const requireCaptcha = computed(() => loginAttempts.value >= 3)
 
   const isLockedOut = computed(() => {
     if (!lockoutTime.value) return false
@@ -21,7 +21,7 @@ export const useSecurity = () => {
     loginAttempts.value++
 
     if (loginAttempts.value >= 3) {
-      requireCaptcha.value = true
+      //requireCaptcha.value = true
     }
 
     if (loginAttempts.value >= 5) {
@@ -32,7 +32,7 @@ export const useSecurity = () => {
   const resetLoginAttempts = () => {
     loginAttempts.value = 0
     lockoutTime.value = null
-    requireCaptcha.value = false
+    //requireCaptcha.value = false
   }
 
   const generateCaptcha = () => {
@@ -89,15 +89,15 @@ export const useSecurity = () => {
   }
 
   return {
-    loginAttempts: computed(() => loginAttempts.value),
-    isLockedOut,
-    remainingLockoutTime,
-    requireCaptcha: computed(() => requireCaptcha.value),
+  loginAttempts: computed(() => loginAttempts.value),
+  isLockedOut,
+  remainingLockoutTime,
+  requireCaptcha,
+  incrementLoginAttempts,
+  resetLoginAttempts,
+  generateCaptcha,
+  logActivity,
+  checkSessionSecurity
+}
 
-    incrementLoginAttempts,
-    resetLoginAttempts,
-    generateCaptcha,
-    logActivity,
-    checkSessionSecurity
-  }
 }

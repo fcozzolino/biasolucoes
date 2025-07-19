@@ -14,11 +14,6 @@ use App\Models\ActivityLog;
 
 Route::post('/activity-log', [ActivityLogController::class, 'store'])->name('api.activity-log');
 
-Route::post('/activity-log', function (Request $request) {
-    ActivityLog::log('login_attempt', 'Login attempt via email', [], 'auth');
-    return response()->json(['message' => 'Log registrado.']);
-});
-
 
 Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
   return $request->user();

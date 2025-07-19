@@ -199,7 +199,7 @@
           </template>
 
           <!-- CAPTCHA -->
-          <div v-if="security.requireCaptcha" class="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
+          <div v-if="security.requireCaptcha.value && !security.isLockedOut.value" class="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
             <p class="text-sm text-gray-600 dark:text-gray-400 mb-3">
               Por segurança, resolva o cálculo:
             </p>
@@ -230,7 +230,7 @@
 
           <!-- Lockout Message -->
           <div
-            v-if="security.isLockedOut"
+            v-if="security.isLockedOut.value"
             class="bg-yellow-50 border border-yellow-200 text-yellow-800 px-4 py-3 rounded-lg"
           >
             <p class="text-sm">
@@ -443,11 +443,12 @@
 
       if (loginMethod.value === 'email') {
         result = await auth.login({
-          email: email.value.value, // Note: .value.value porque email é um objeto reativo
-          password: password.value.value, // Note: .value.value
+          email: email.value.value,
+          password: password.value.value,
           remember: remember.value,
+          captcha: captchaAnswer.value, // <-- Enviando o valor digitado no cálculo
         });
-        console.log('Result from auth.login:', result);  // Adicione isso
+        console.log('Result from auth.login:', result); // Adicione isso
       } else {
         const cleanPhone = phone.value.value.replace(/\D/g, '');
         result = await auth.loginWithPhone(cleanPhone, countryCode.value);
@@ -469,6 +470,9 @@
         }
       } else {
         security.incrementLoginAttempts();
+        console.log('Tentativas de login falhadas:', security.failedAttempts.value);
+        console.log('Requer CAPTCHA:', security.requireCaptcha.value);
+        console.log('Está bloqueado:', security.isLockedOut.value);
 
         // Handle specific errors
         if (result.errors) {
@@ -517,6 +521,10 @@
 
     const interval = setInterval(() => {
       if (!security.isLockedOut.value) {
+        // Revalida se precisa mostrar CAPTCHA e gera um novo
+        if (security.requireCaptcha.value) {
+          captcha.value = security.generateCaptcha();
+        }
         clearInterval(interval);
       }
     }, 1000);

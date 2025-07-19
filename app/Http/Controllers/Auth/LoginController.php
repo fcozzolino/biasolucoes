@@ -19,8 +19,16 @@ class LoginController extends Controller
    */
   public function showLoginForm()
   {
-    return view('auth.login');
+    $a = rand(1, 9);
+    $b = rand(1, 9);
+    session([
+      'captcha_result' => $a + $b,
+      'captcha_a' => $a,
+      'captcha_b' => $b,
+    ]);
+    return view('auth.login', compact('a', 'b'));
   }
+
 
   /**
    * Handle login request with email/password.
@@ -31,7 +39,13 @@ class LoginController extends Controller
       'email' => 'required|email',
       'password' => 'required|string',
       'remember' => 'boolean',
+      'captcha' => ['required', function ($attribute, $value, $fail) {
+        if (session('captcha_result') != $value) {
+          $fail('CAPTCHA incorreto');
+        }
+      }],
     ]);
+
 
     // Check rate limiting
     $this->checkRateLimit($request);
